@@ -1,30 +1,57 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Two possible desktop modes: 'runaway' (button flees from cursor around section) or 'staged' (transforms over stages)
-// Mobile: tap-driven (teleport/shrink/rotate/rename with growing YES)
+// -- 25 popup taunt messages with a sad/angry emoji --
+const POPUPS = [
+  { msg: 'No', emoji: '😒' },
+  { msg: 'Are you sure?', emoji: '🥺' },
+  { msg: 'Really?', emoji: '😢' },
+  { msg: 'Think again...', emoji: '🤨' },
+  { msg: 'Last chance', emoji: '😔' },
+  { msg: 'Surely not?', emoji: '😞' },
+  { msg: 'Please?', emoji: '🥺' },
+  { msg: "You'll regret this", emoji: '😤' },
+  { msg: "I don't believe you", emoji: '🙄' },
+  { msg: 'Read the question again', emoji: '😑' },
+  { msg: 'Wrong button', emoji: '😾' },
+  { msg: 'Seriously?', emoji: '😠' },
+  { msg: 'Fine...', emoji: '😩' },
+  { msg: "Don't break my heart", emoji: '💔' },
+  { msg: "No doesn't suit you", emoji: '🥲' },
+  { msg: 'Try again', emoji: '😢' },
+  { msg: 'Ouch, that hurt', emoji: '😭' },
+  { msg: 'One more try?', emoji: '🥺' },
+  { msg: 'My heart is crying', emoji: '💔' },
+  { msg: 'Look at me and press YES', emoji: '🥹' },
+  { msg: 'Come on Sameer...', emoji: '😔' },
+  { msg: 'Are you kidding?', emoji: '😾' },
+  { msg: "That's not the answer", emoji: '😒' },
+  { msg: 'Pretty please 💕', emoji: '🥺' },
+  { msg: 'The other one, love', emoji: '🙄' },
+];
+
 export default function Proposal({ question, yesButton, noTexts, onYes }) {
   const containerRef = useRef(null);
   const noRef = useRef(null);
   const [isTouch, setIsTouch] = useState(false);
-  const [mode, setMode] = useState(null); // 'runaway' | 'staged' | 'mobile'
+  const [mode, setMode] = useState(null); // 'runaway' | 'popup' | 'mobile'
   const [stage, setStage] = useState(0);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [rot, setRot] = useState(0);
+  const [popups, setPopups] = useState([]);
 
-  // Randomly pick desktop behavior once
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const touch = matchMedia('(hover: none)').matches;
     setIsTouch(touch);
     if (touch) setMode('mobile');
-    else setMode(Math.random() < 0.5 ? 'runaway' : 'staged');
+    else setMode(Math.random() < 0.5 ? 'runaway' : 'popup');
   }, []);
 
-  // Desktop cursor tracking
+  // Desktop cursor-chase (only for 'runaway' mode)
   useEffect(() => {
-    if (!mode || mode === 'mobile') return;
+    if (mode !== 'runaway') return;
     const onMove = (e) => {
       if (!noRef.current || !containerRef.current) return;
       const rect = noRef.current.getBoundingClientRect();
@@ -33,70 +60,83 @@ export default function Proposal({ question, yesButton, noTexts, onYes }) {
       const dx = e.clientX - cx;
       const dy = e.clientY - cy;
       const dist = Math.hypot(dx, dy);
-      const trigger = mode === 'runaway' ? 150 : 130;
+      const trigger = 150;
       if (dist < trigger) {
         const box = containerRef.current.getBoundingClientRect();
         const maxX = box.width / 2 - 100;
         const maxY = box.height / 2 - 80;
-
-        if (mode === 'runaway') {
-          // Fly to a random corner-ish location every time cursor gets near
-          const angle = Math.atan2(-dy, -dx) + (Math.random() - 0.5) * 1.2;
-          const strength = 220 + Math.random() * 80;
-          let nx = pos.x + Math.cos(angle) * strength;
-          let ny = pos.y + Math.sin(angle) * strength;
-          nx = Math.max(-maxX, Math.min(maxX, nx));
-          ny = Math.max(-maxY, Math.min(maxY, ny));
-          // if hit border, jump elsewhere
-          if (Math.abs(nx) > maxX - 20 || Math.abs(ny) > maxY - 20) {
-            nx = (Math.random() * 2 - 1) * maxX * 0.9;
-            ny = (Math.random() * 2 - 1) * maxY * 0.9;
-          }
-          setPos({ x: nx, y: ny });
-          setRot((Math.random() - 0.5) * 30);
-        } else {
-          // staged mode
-          setStage((s) => Math.min(s + 1, noTexts.length - 1));
-          let nx, ny;
-          if (stage < 2) {
-            nx = pos.x - (dx / (dist || 1)) * 90;
-            ny = pos.y - (dy / (dist || 1)) * 90;
-          } else if (stage < 4) {
-            nx = pos.x - (dx / (dist || 1)) * 220;
-            ny = pos.y - (dy / (dist || 1)) * 220;
-          } else {
-            // teleport
-            nx = (Math.random() * 2 - 1) * maxX * 0.9;
-            ny = (Math.random() * 2 - 1) * maxY * 0.9;
-          }
-          nx = Math.max(-maxX, Math.min(maxX, nx));
-          ny = Math.max(-maxY, Math.min(maxY, ny));
-          setPos({ x: nx, y: ny });
-          if (stage >= 4) setRot((r) => r + 25);
+        const angle = Math.atan2(-dy, -dx) + (Math.random() - 0.5) * 1.2;
+        const strength = 220 + Math.random() * 80;
+        let nx = pos.x + Math.cos(angle) * strength;
+        let ny = pos.y + Math.sin(angle) * strength;
+        nx = Math.max(-maxX, Math.min(maxX, nx));
+        ny = Math.max(-maxY, Math.min(maxY, ny));
+        if (Math.abs(nx) > maxX - 20 || Math.abs(ny) > maxY - 20) {
+          nx = (Math.random() * 2 - 1) * maxX * 0.9;
+          ny = (Math.random() * 2 - 1) * maxY * 0.9;
         }
+        setPos({ x: nx, y: ny });
+        setRot((Math.random() - 0.5) * 30);
       }
     };
     window.addEventListener('mousemove', onMove);
     return () => window.removeEventListener('mousemove', onMove);
-  }, [mode, pos, stage, noTexts.length]);
+  }, [mode, pos]);
 
-  const onNoTap = () => {
-    // Mobile-only behavior on tap (desktop click also works fine)
+  const spawnPopup = () => {
     if (!containerRef.current) return;
     const box = containerRef.current.getBoundingClientRect();
-    const maxX = box.width / 2 - 100;
-    const maxY = box.height / 2 - 80;
-    setStage((s) => Math.min(s + 1, noTexts.length - 1));
-    setPos({
-      x: (Math.random() * 2 - 1) * maxX,
-      y: (Math.random() * 2 - 1) * maxY,
-    });
-    setRot(Math.random() * 90 - 45);
+    const p = POPUPS[Math.floor(Math.random() * POPUPS.length)];
+    // random position within middle 80% of the container
+    const w = box.width, h = box.height;
+    const x = w * (0.1 + Math.random() * 0.8) - w / 2;
+    const y = h * (0.15 + Math.random() * 0.7) - h / 2;
+    const id = Math.random().toString(36).slice(2);
+    setPopups((prev) => [...prev.slice(-6), { id, x, y, ...p }]);
+    setTimeout(() => setPopups((prev) => prev.filter((pp) => pp.id !== id)), 2500);
   };
 
-  const yesScale = useMemo(() => 1 + Math.min(stage, 14) * 0.16, [stage]);
-  const noScale = useMemo(() => Math.max(0.28, 1 - stage * 0.055), [stage]);
-  const noText = noTexts[Math.min(stage, noTexts.length - 1)];
+  const onNoClick = () => {
+    // MOBILE: teleport / shrink / rotate / rename dance (unchanged)
+    if (mode === 'mobile') {
+      if (!containerRef.current) return;
+      const box = containerRef.current.getBoundingClientRect();
+      const maxX = box.width / 2 - 100;
+      const maxY = box.height / 2 - 80;
+      setStage((s) => Math.min(s + 1, noTexts.length - 1));
+      setPos({ x: (Math.random() * 2 - 1) * maxX, y: (Math.random() * 2 - 1) * maxY });
+      setRot(Math.random() * 90 - 45);
+      return;
+    }
+    // POPUP mode (desktop behaviour 2)
+    if (mode === 'popup') {
+      spawnPopup();
+      // YES grows with every press. NO stays put.
+      setStage((s) => s + 1);
+      return;
+    }
+    // RUNAWAY mode click: also nudge as extra feedback
+    if (mode === 'runaway') {
+      setStage((s) => s + 1);
+      const box = containerRef.current.getBoundingClientRect();
+      const maxX = box.width / 2 - 100;
+      const maxY = box.height / 2 - 80;
+      setPos({ x: (Math.random() * 2 - 1) * maxX, y: (Math.random() * 2 - 1) * maxY });
+      setRot(Math.random() * 90 - 45);
+    }
+  };
+
+  // Sizing:
+  // YES grows with stage; NO shrinks a bit ONLY in mobile (not in popup mode NO stays same size)
+  const yesScale = useMemo(() => 1 + Math.min(stage, 18) * 0.14, [stage]);
+  const noScale = useMemo(() => {
+    if (mode === 'popup') return 1; // stays put and same size
+    return Math.max(0.28, 1 - stage * 0.055);
+  }, [mode, stage]);
+  const noText = useMemo(() => {
+    if (mode === 'popup') return 'NO';
+    return noTexts[Math.min(stage, noTexts.length - 1)];
+  }, [mode, stage, noTexts]);
 
   return (
     <div ref={containerRef} className="relative w-full min-h-[70vh] flex flex-col items-center justify-center px-6 overflow-hidden">
@@ -109,8 +149,7 @@ export default function Proposal({ question, yesButton, noTexts, onYes }) {
         {question}
       </motion.h2>
 
-      <div className="relative w-full max-w-3xl h-[320px] md:h-[360px] flex items-center justify-center gap-6">
-        {/* Static neutral positions so both are visible at start */}
+      <div className="relative w-full max-w-3xl h-[340px] md:h-[380px] flex items-center justify-center gap-6">
         <motion.button
           onClick={onYes}
           animate={{ scale: yesScale }}
@@ -127,19 +166,40 @@ export default function Proposal({ question, yesButton, noTexts, onYes }) {
 
         <motion.button
           ref={noRef}
-          onClick={onNoTap}
-          animate={{ x: pos.x, y: pos.y, rotate: rot, scale: noScale }}
+          onClick={onNoClick}
+          animate={mode === 'popup' ? { x: 0, y: 0, rotate: 0, scale: 1 } : { x: pos.x, y: pos.y, rotate: rot, scale: noScale }}
           transition={{ type: 'spring', stiffness: 300, damping: 22 }}
           className="px-6 py-3 rounded-full bg-white/85 text-rose-800 font-serif-fancy text-lg md:text-xl border border-rose-200 shadow-lg z-20"
           style={{ minWidth: 90 }}
         >
           {noText}
         </motion.button>
+
+        {/* Popup taunts (only in 'popup' behaviour) */}
+        <AnimatePresence>
+          {mode === 'popup' && popups.map((p) => (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, scale: 0.6, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.7, y: -10 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+              className="absolute pointer-events-none"
+              style={{ left: '50%', top: '50%', transform: `translate(calc(-50% + ${p.x}px), calc(-50% + ${p.y}px))` }}
+            >
+              <div className="relative px-4 py-2 rounded-2xl bg-white shadow-2xl border border-rose-100 flex items-center gap-2">
+                <span className="text-xl">{p.emoji}</span>
+                <span className="font-serif-fancy text-rose-950 whitespace-nowrap">{p.msg}</span>
+                <span className="absolute -bottom-1.5 left-6 w-3 h-3 bg-white rotate-45 border-r border-b border-rose-100" />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
       <p className="mt-10 text-rose-800/70 text-sm md:text-base italic">
         {mode === 'runaway' && '(good luck catching that one)'}
-        {mode === 'staged' && '(the more you try, the more it changes)'}
+        {mode === 'popup' && '(press NO if you dare... I have things to say)'}
         {mode === 'mobile' && '(tap NO if you dare)'}
       </p>
     </div>
