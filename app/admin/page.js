@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Heart, Upload, Trash2, Plus, Save, Music, ImagePlus, Lock } from 'lucide-react';
+import { Heart, Upload, Trash2, Plus, Save, Music, ImagePlus, Lock, Cloud, CheckCircle2, LogOut } from 'lucide-react';
+import MediaPicker from '@/components/MediaPicker';
+import { getAccessToken } from '@/lib/googleDrive';
 
 async function api(url, method = 'GET', body) {
   const opts = { method, headers: {} };
@@ -29,8 +31,9 @@ function Login({ onOk }) {
     else setErr('Wrong password');
   };
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <form onSubmit={submit} className="glass rounded-3xl p-8 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-6 relative">
+      <div className="mesh-bg" />
+      <form onSubmit={submit} className="glass rounded-3xl p-8 w-full max-w-md relative z-10">
         <div className="flex items-center gap-2 text-rose-800 mb-4"><Lock className="w-5 h-5" /><span className="font-serif-fancy text-xl">Admin</span></div>
         <input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="admin password"
           className="w-full px-4 py-3 rounded-full bg-white/80 border border-rose-200 outline-none focus:border-rose-500" />
@@ -42,24 +45,57 @@ function Login({ onOk }) {
 }
 
 function UploadButton({ folder = 'photos', onUploaded, label = 'Upload' }) {
-  const [loading, setLoading] = useState(false);
-  const onChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLoading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('folder', folder);
-    const r = await api('/api/upload', 'POST', fd);
-    setLoading(false);
-    if (r.ok) onUploaded(r.url, file.name);
-    e.target.value = '';
-  };
+  const acceptMap = { photos: 'image', music: 'audio', voice: 'audio', videos: 'video' };
+  const accept = acceptMap[folder] || 'any';
   return (
-    <label className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-rose-500 text-white text-sm cursor-pointer">
-      <Upload className="w-4 h-4" /> {loading ? 'Uploading...' : label}
-      <input type="file" className="hidden" onChange={onChange} accept={folder === 'music' ? 'audio/*' : 'image/*,video/*'} />
-    </label>
+    <MediaPicker
+      folder={folder}
+      accept={accept}
+      label={label}
+      onPick={(item) => onUploaded(item.url, item.name)}
+    />
+  );
+}
+
+function GoogleDriveCard() {
+  const [status, setStatus] = useState({ connected: false, expires_at: null });
+  const [busy, setBusy] = useState(false);
+  const refresh = async () => setStatus(await api('/api/google/status'));
+  useEffect(() => { refresh(); }, []);
+
+  const connect = async () => {
+    setBusy(true);
+    try { await getAccessToken({ interactive: true }); await refresh(); } catch (e) { alert(e.message); }
+    finally { setBusy(false); }
+  };
+  const disconnect = async () => {
+    if (!confirm('Disconnect Google Drive?')) return;
+    await api('/api/google/disconnect', 'POST');
+    await refresh();
+  };
+
+  return (
+    <Section title="Google Drive">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Cloud className="w-6 h-6 text-rose-600" />
+        {status.connected ? (
+          <>
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <span className="text-sm text-rose-900">Connected · token valid until {new Date(status.expires_at).toLocaleTimeString()}</span>
+            <button onClick={connect} disabled={busy} className="ml-auto px-3 py-1.5 rounded-full bg-white/80 text-rose-800 text-sm">Refresh</button>
+            <button onClick={disconnect} className="px-3 py-1.5 rounded-full bg-red-500 text-white text-sm inline-flex items-center gap-1"><LogOut className="w-3 h-3" />Disconnect</button>
+          </>
+        ) : (
+          <>
+            <span className="text-sm text-rose-900/80">Not connected. Sign in to enable picking and streaming Drive files.</span>
+            <button onClick={connect} disabled={busy} className="ml-auto px-4 py-2 rounded-full text-white text-sm" style={{ background: 'linear-gradient(120deg, #ff5f8f, #b46aff)' }}>
+              {busy ? 'Opening...' : 'Connect Google Drive'}
+            </button>
+          </>
+        )}
+      </div>
+      <p className="text-xs text-rose-800/60 mt-3">Access tokens live for ~1 hour. Reconnect when they expire. Files you pick will be streamed via <code>/api/drive/&lt;id&gt;</code> so you don't need to make them public.</p>
+    </Section>
   );
 }
 
@@ -286,6 +322,7 @@ function App() {
           </div>
         </div>
 
+        <GoogleDriveCard />
         <MemoriesEditor cfg={cfg} setCfg={setCfg} />
         <MusicEditor cfg={cfg} setCfg={setCfg} />
         <QuizEditor cfg={cfg} setCfg={setCfg} />

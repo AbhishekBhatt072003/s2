@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/mongo';
+import { sbAdmin } from '@/lib/supabase';
 import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
@@ -18,33 +18,43 @@ const DEFAULT_SCRATCH = [
   { id: 'sc2', title: 'A hidden note', reveal: 'You are my favorite hello and hardest goodbye.', image: '' },
 ];
 
+const DEFAULT_CONFIG = {
+  memoriesOverride: null,
+  playlist: [],
+  quiz: DEFAULT_QUIZ,
+  scratchCards: DEFAULT_SCRATCH,
+  photoWall: [],
+  photoWallUsername: 'abheer',
+  unlockMemoryId: 'secret1',
+  secretMemory: {
+    title: 'You unlocked a secret 💕',
+    description: 'This memory is only for people who play games for love. Which is you. Only you.',
+    photo: '',
+  },
+};
+
 async function getConfig() {
-  const db = await getDb();
-  let cfg = await db.collection('config').findOne({ _id: DEFAULT_CONFIG_ID });
-  if (!cfg) {
-    cfg = {
-      _id: DEFAULT_CONFIG_ID,
-      memoriesOverride: null,
-      playlist: [],
-      quiz: DEFAULT_QUIZ,
-      scratchCards: DEFAULT_SCRATCH,
-      photoWall: [],
-      photoWallUsername: 'abheer',
-      unlockMemoryId: 'secret1',
-      secretMemory: {
-        title: 'You unlocked a secret 💕',
-        description: 'This memory is only for people who play games for love. Which is you. Only you.',
-        photo: '',
-      },
-    };
-    await db.collection('config').insertOne(cfg);
+  const sb = sbAdmin();
+  const { data, error } = await sb.from('config').select('data').eq('id', DEFAULT_CONFIG_ID).maybeSingle();
+  if (error) throw error;
+  if (!data) {
+    const { error: insErr } = await sb.from('config').insert({ id: DEFAULT_CONFIG_ID, data: DEFAULT_CONFIG });
+    if (insErr) throw insErr;
+    return DEFAULT_CONFIG;
   }
-  return cfg;
+  return { ...DEFAULT_CONFIG, ...(data.data || {}) };
 }
 
-function json(data, status = 200) {
-  return NextResponse.json(data, { status });
+async function saveConfig(patch) {
+  const sb = sbAdmin();
+  const current = await getConfig();
+  const merged = { ...current, ...patch };
+  const { error } = await sb.from('config').upsert({ id: DEFAULT_CONFIG_ID, data: merged, updated_at: new Date().toISOString() });
+  if (error) throw error;
+  return merged;
 }
+
+function json(data, status = 200) { return NextResponse.json(data, { status }); }
 
 async function saveUpload(file, subfolder) {
   const buf = Buffer.from(await file.arrayBuffer());
@@ -58,6 +68,41 @@ async function saveUpload(file, subfolder) {
   return `/assets/${subfolder}/${fname}`;
 }
 
+// ---------- Google Drive helpers ----------
+async function getGoogleToken() {
+  const sb = sbAdmin();
+  const { data } = await sb.from('google_tokens').select('*').eq('id', 'main').maybeSingle();
+  return data || null;
+}
+
+async function saveGoogleToken({ access_token, expires_in, scope }) {
+  const sb = sbAdmin();
+  const expires_at = new Date(Date.now() + (Number(expires_in) - 60) * 1000).toISOString();
+  const { error } = await sb.from('google_tokens').upsert({
+    id: 'main',
+    access_token,
+    expires_at,
+    scope,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+  return { expires_at };
+}
+
+async function driveFetch(fileIdOrUrl, init = {}) {
+  const tok = await getGoogleToken();
+  if (!tok?.access_token) return { status: 401, error: 'Google not connected' };
+  const url = fileIdOrUrl.startsWith('http')
+    ? fileIdOrUrl
+    : `https://www.googleapis.com/drive/v3/files/${fileIdOrUrl}?alt=media&supportsAllDrives=true`;
+  const r = await fetch(url, {
+    ...init,
+    headers: { ...(init.headers || {}), Authorization: `Bearer ${tok.access_token}` },
+  });
+  return r;
+}
+
+// ---------- HANDLER ----------
 async function handler(request, ctx) {
   const params = await ctx.params;
   const segments = params?.path || [];
@@ -65,37 +110,26 @@ async function handler(request, ctx) {
   const method = request.method;
 
   try {
-    // Health
     if (route === '' && method === 'GET') return json({ ok: true, message: 'For you ❤️' });
 
-    // Site auth
     if (route === 'auth' && method === 'POST') {
       const { password } = await request.json();
-      const ok = password === (process.env.SITE_PASSWORD || 'myheart');
-      return json({ ok });
+      return json({ ok: password === (process.env.SITE_PASSWORD || 'myheart') });
     }
     if (route === 'admin-auth' && method === 'POST') {
       const { password } = await request.json();
-      const ok = password === (process.env.ADMIN_PASSWORD || 'admin123');
-      return json({ ok });
+      return json({ ok: password === (process.env.ADMIN_PASSWORD || 'admin123') });
     }
 
-    // Get config (public)
-    if (route === 'config' && method === 'GET') {
-      const cfg = await getConfig();
-      return json(cfg);
-    }
-    // Save config (public in MVP)
+    if (route === 'config' && method === 'GET') return json(await getConfig());
     if (route === 'config' && method === 'PUT') {
       const body = await request.json();
-      const db = await getDb();
-      const update = { ...body };
-      delete update._id;
-      await db.collection('config').updateOne({ _id: DEFAULT_CONFIG_ID }, { $set: update }, { upsert: true });
-      return json({ ok: true });
+      delete body._id;
+      delete body.id;
+      const merged = await saveConfig(body);
+      return json({ ok: true, data: merged });
     }
 
-    // File upload
     if (route === 'upload' && method === 'POST') {
       const form = await request.formData();
       const file = form.get('file');
@@ -105,6 +139,99 @@ async function handler(request, ctx) {
       if (!file || typeof file === 'string') return json({ error: 'no file' }, 400);
       const url = await saveUpload(file, sub);
       return json({ ok: true, url, name: file.name, size: file.size });
+    }
+
+    // ---- Google Drive ----
+    if (route === 'google/token' && method === 'POST') {
+      const body = await request.json();
+      const { expires_at } = await saveGoogleToken(body);
+      return json({ ok: true, expires_at });
+    }
+    if (route === 'google/status' && method === 'GET') {
+      const tok = await getGoogleToken();
+      if (!tok?.access_token) return json({ connected: false });
+      const expired = tok.expires_at && new Date(tok.expires_at).getTime() < Date.now();
+      return json({ connected: !expired, expires_at: tok.expires_at });
+    }
+    if (route === 'google/disconnect' && method === 'POST') {
+      const sb = sbAdmin();
+      await sb.from('google_tokens').delete().eq('id', 'main');
+      return json({ ok: true });
+    }
+    if (route === 'google/meta' && method === 'POST') {
+      // fetch metadata for a list of file ids
+      const { fileIds } = await request.json();
+      if (!Array.isArray(fileIds)) return json({ error: 'fileIds required' }, 400);
+      const tok = await getGoogleToken();
+      if (!tok?.access_token) return json({ error: 'Google not connected' }, 401);
+      const out = [];
+      for (const fid of fileIds) {
+        const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?fields=id,name,mimeType,thumbnailLink,size&supportsAllDrives=true`, {
+          headers: { Authorization: `Bearer ${tok.access_token}` },
+        });
+        if (r.ok) out.push(await r.json());
+      }
+      return json({ files: out });
+    }
+    if (route === 'google/save-media' && method === 'POST') {
+      // Persist selected files to drive_media
+      const { files, section, associatedId } = await request.json();
+      if (!Array.isArray(files)) return json({ error: 'files required' }, 400);
+      const sb = sbAdmin();
+      const rows = files.map((f, i) => ({
+        drive_file_id: f.id,
+        file_name: f.name || null,
+        mime_type: f.mimeType || null,
+        section: section || null,
+        associated_id: associatedId || null,
+        display_order: i,
+        thumbnail_link: f.thumbnailLink || null,
+      }));
+      const { error } = await sb.from('drive_media').upsert(rows, { onConflict: 'drive_file_id' });
+      if (error) return json({ error: error.message }, 500);
+      return json({ ok: true, count: rows.length });
+    }
+
+    // Drive file proxy: /api/drive/FILE_ID (used as <img src=>, <video src=>, <audio src=>)
+    if (segments[0] === 'drive' && segments[1] && method === 'GET') {
+      const fid = segments[1];
+      // Try thumbnail sub-route: /api/drive/FILE_ID/thumb
+      const isThumb = segments[2] === 'thumb';
+      const tok = await getGoogleToken();
+      if (!tok?.access_token) return json({ error: 'Google not connected' }, 401);
+
+      // Get metadata to know mime type
+      const metaR = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?fields=id,name,mimeType,thumbnailLink&supportsAllDrives=true`, {
+        headers: { Authorization: `Bearer ${tok.access_token}` },
+      });
+      if (!metaR.ok) return json({ error: 'Drive meta failed', status: metaR.status }, metaR.status);
+      const meta = await metaR.json();
+
+      if (isThumb && meta.thumbnailLink) {
+        // large thumb
+        const bigThumb = meta.thumbnailLink.replace(/=s\d+/, '=s1600');
+        const tr = await fetch(bigThumb, { headers: { Authorization: `Bearer ${tok.access_token}` } });
+        const buf = await tr.arrayBuffer();
+        return new NextResponse(buf, { headers: { 'Content-Type': tr.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'public, max-age=3600' } });
+      }
+
+      const range = request.headers.get('range');
+      const dr = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media&supportsAllDrives=true`, {
+        headers: {
+          Authorization: `Bearer ${tok.access_token}`,
+          ...(range ? { Range: range } : {}),
+        },
+      });
+      if (!dr.ok && dr.status !== 206) return json({ error: 'Drive fetch failed', status: dr.status }, dr.status);
+
+      // Pipe streaming response
+      const headers = new Headers();
+      headers.set('Content-Type', meta.mimeType || 'application/octet-stream');
+      const cl = dr.headers.get('content-length'); if (cl) headers.set('Content-Length', cl);
+      const cr = dr.headers.get('content-range'); if (cr) headers.set('Content-Range', cr);
+      const ar = dr.headers.get('accept-ranges'); if (ar) headers.set('Accept-Ranges', ar);
+      headers.set('Cache-Control', 'public, max-age=3600');
+      return new NextResponse(dr.body, { status: dr.status, headers });
     }
 
     return json({ error: 'not_found', route }, 404);
@@ -117,5 +244,4 @@ export const GET = handler;
 export const POST = handler;
 export const PUT = handler;
 export const DELETE = handler;
-
 export const runtime = 'nodejs';
