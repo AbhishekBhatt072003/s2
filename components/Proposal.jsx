@@ -199,10 +199,29 @@ export default function Proposal({ question, yesButton, onYes }) {
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-4xl md:text-6xl text-center font-serif-fancy italic gradient-text mb-14"
+        className="text-4xl md:text-6xl text-center font-serif-fancy italic gradient-text mb-8"
       >
         {question}
       </motion.h2>
+
+      {/* Final centered message after 25 clicks — sits ABOVE the buttons so YES stays fully visible */}
+      <AnimatePresence>
+        {mode === 'popup' && showFinal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            className="mb-6 flex items-center justify-center px-4"
+          >
+            <div className="px-6 py-4 rounded-3xl bg-white/95 backdrop-blur border border-rose-100 shadow-2xl flex items-center gap-3 max-w-[92%]">
+              <span className="text-3xl">😏</span>
+              <span className="font-serif-fancy text-rose-950 text-lg md:text-xl">
+                Ok fine... then I&apos;m forcing you to stay hehe <span className="text-rose-500">❤️</span>
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative w-full max-w-3xl h-[340px] md:h-[380px] flex items-center justify-center gap-6">
         <button
@@ -251,25 +270,6 @@ export default function Proposal({ question, yesButton, onYes }) {
             </div>
           </motion.div>
         ))}
-      </AnimatePresence>
-
-      {/* Final centered message after 25 clicks */}
-      <AnimatePresence>
-        {mode === 'popup' && showFinal && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.7, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-            className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center z-30 pointer-events-none px-4"
-          >
-            <div className="px-6 py-4 rounded-3xl bg-white/95 backdrop-blur border border-rose-100 shadow-2xl flex items-center gap-3 max-w-[92%]">
-              <span className="text-3xl">😏</span>
-              <span className="font-serif-fancy text-rose-950 text-lg md:text-xl">
-                Ok fine... then I&apos;m forcing you to stay hehe <span className="text-rose-500">❤️</span>
-              </span>
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
 
       <p className="mt-10 text-rose-800/70 text-sm md:text-base italic">
