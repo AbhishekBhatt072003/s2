@@ -117,21 +117,31 @@ export default function Constellations() {
 
   return (
     <section className="relative overflow-hidden">
-      {/* Full-section immersive background: soft pink haze on top -> deep starry night -> soft violet bottom */}
+      {/* Fully transparent at top & bottom edges so the pink mesh-bg blends through — no visible seam */}
       <div className="absolute inset-0 -z-10" style={{
         background:
-          'linear-gradient(180deg, #fce4ee 0%, #e8b4d9 8%, #8a5a9b 20%, #3a1d5b 38%, #1a0e3d 55%, #221252 78%, #4a2a72 92%, #d9a4c9 100%)',
+          'linear-gradient(180deg,\
+            rgba(232, 180, 217, 0) 0%,\
+            rgba(140, 90, 155, 0.18) 6%,\
+            rgba(90, 55, 130, 0.55) 14%,\
+            rgba(45, 22, 85, 0.88) 26%,\
+            rgba(20, 10, 45, 0.96) 42%,\
+            rgba(20, 10, 45, 0.96) 60%,\
+            rgba(45, 22, 85, 0.88) 76%,\
+            rgba(90, 55, 130, 0.55) 88%,\
+            rgba(180, 130, 190, 0.18) 96%,\
+            rgba(232, 180, 217, 0) 100%)',
       }} />
 
-      {/* Milky Way — left cloud */}
-      <div className="absolute inset-y-0 left-0 w-1/3 pointer-events-none opacity-70" style={{
+      {/* Milky Way — left cloud (soft, low opacity near edges) */}
+      <div className="absolute inset-y-16 md:inset-y-32 left-0 w-1/3 pointer-events-none opacity-70" style={{
         background:
           'radial-gradient(ellipse 60% 50% at 20% 70%, rgba(180, 106, 255, 0.55) 0%, rgba(255, 130, 190, 0.15) 40%, transparent 70%),\
            radial-gradient(ellipse 40% 30% at 10% 50%, rgba(220, 180, 255, 0.35) 0%, transparent 70%)',
         filter: 'blur(2px)',
       }} />
       {/* Milky Way — right cloud */}
-      <div className="absolute inset-y-0 right-0 w-1/3 pointer-events-none opacity-70" style={{
+      <div className="absolute inset-y-16 md:inset-y-32 right-0 w-1/3 pointer-events-none opacity-70" style={{
         background:
           'radial-gradient(ellipse 60% 50% at 80% 60%, rgba(180, 106, 255, 0.55) 0%, rgba(255, 130, 190, 0.15) 40%, transparent 70%),\
            radial-gradient(ellipse 40% 30% at 90% 40%, rgba(255, 180, 220, 0.3) 0%, transparent 70%)',

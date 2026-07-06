@@ -20,10 +20,11 @@ export default function IntroSequence({ lines, onBegin }) {
   useEffect(() => {
     if (phase < 3) return;
     if (visibleLines >= lines.length) {
-      const t = setTimeout(() => setPhase(4), 800);
+      // Give a good long pause so the last line ("I hope this makes you smile") sinks in
+      const t = setTimeout(() => setPhase(4), 3200);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setVisibleLines((v) => v + 1), 1300);
+    const t = setTimeout(() => setVisibleLines((v) => v + 1), 1500);
     return () => clearTimeout(t);
   }, [phase, visibleLines, lines.length]);
 
