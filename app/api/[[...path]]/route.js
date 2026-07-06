@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   scratchCards: DEFAULT_SCRATCH,
   photoWall: [],
   photoWallUsername: 'abheer',
+  scrapbook: [],
   unlockMemoryId: 'secret1',
   secretMemory: {
     title: 'You unlocked a secret 💕',

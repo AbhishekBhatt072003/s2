@@ -238,6 +238,51 @@ function ScratchEditor({ cfg, setCfg }) {
   );
 }
 
+function ScrapbookEditor({ cfg, setCfg }) {
+  const list = cfg.scrapbook || [];
+  const update = (i, patch) => setCfg({ ...cfg, scrapbook: list.map((s, k) => k === i ? { ...s, ...patch } : s) });
+  const add = () => setCfg({ ...cfg, scrapbook: [...list, { id: `s_${Date.now()}`, photo: '', caption: '', location: '', lat: undefined, lng: undefined }] });
+  const remove = (i) => setCfg({ ...cfg, scrapbook: list.filter((_, k) => k !== i) });
+
+  return (
+    <Section title="Scrapbook & Extra Map Pins">
+      <p className="text-sm text-rose-800/70 mb-3">
+        Each photo appears in the scrapbook as a taped polaroid. If you also add latitude &amp; longitude,
+        it becomes an extra pin on the world map (in addition to your memory pins).
+      </p>
+      <button onClick={add} className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-white/80 text-rose-800 text-sm mb-3">
+        <Plus className="w-4 h-4" /> Add scrapbook photo
+      </button>
+      <div className="space-y-4">
+        {list.map((s, i) => (
+          <div key={s.id} className="bg-white/60 rounded-2xl p-4 border border-rose-100">
+            <div className="flex flex-wrap items-start gap-3">
+              {s.photo ? (
+                <div className="relative w-40 h-40 rounded-lg overflow-hidden">
+                  <img src={s.photo} alt="" className="w-full h-full object-cover" />
+                  <button onClick={() => update(i, { photo: '' })} className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ) : (
+                <MediaPicker folder="photos" accept="image" label="Choose photo" onPick={(it) => update(i, { photo: it.url })} />
+              )}
+              <div className="flex-1 min-w-[240px] space-y-2">
+                <input value={s.caption} onChange={(e) => update(i, { caption: e.target.value })} placeholder="Caption (e.g., 'sunset on the roof')" className="w-full px-3 py-2 rounded-lg bg-white border" />
+                <input value={s.location} onChange={(e) => update(i, { location: e.target.value })} placeholder="Location name (e.g., 'Paris')" className="w-full px-3 py-2 rounded-lg bg-white border" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" step="any" value={s.lat ?? ''} onChange={(e) => update(i, { lat: e.target.value === '' ? undefined : parseFloat(e.target.value) })} placeholder="Latitude (optional)" className="px-3 py-2 rounded-lg bg-white border" />
+                  <input type="number" step="any" value={s.lng ?? ''} onChange={(e) => update(i, { lng: e.target.value === '' ? undefined : parseFloat(e.target.value) })} placeholder="Longitude (optional)" className="px-3 py-2 rounded-lg bg-white border" />
+                </div>
+                <p className="text-xs text-rose-800/60">Tip: right-click a place in Google Maps → the top item is lat, lng. Click to copy.</p>
+              </div>
+            </div>
+            <button onClick={() => remove(i)} className="mt-3 inline-flex items-center gap-1 text-red-600 text-sm"><Trash2 className="w-3 h-3" /> Delete</button>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function PhotoWallEditor({ cfg, setCfg }) {
   const list = cfg.photoWall || [];
   return (
@@ -327,6 +372,7 @@ function App() {
         <MusicEditor cfg={cfg} setCfg={setCfg} />
         <QuizEditor cfg={cfg} setCfg={setCfg} />
         <ScratchEditor cfg={cfg} setCfg={setCfg} />
+        <ScrapbookEditor cfg={cfg} setCfg={setCfg} />
         <PhotoWallEditor cfg={cfg} setCfg={setCfg} />
         <SecretEditor cfg={cfg} setCfg={setCfg} />
 

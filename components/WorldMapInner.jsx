@@ -60,27 +60,24 @@ function bubbleIcon(photo, emoji) {
   return L.divIcon({ html, className: 'map-bubble-wrap', iconSize: [64, 74], iconAnchor: [32, 74] });
 }
 
-export default function WorldMapInner({ memories }) {
+export default function WorldMapInner({ memories, pins = [] }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
-    // Guard against React 18 StrictMode double-mount: reuse the map instance if it exists on the DOM node.
     if (containerRef.current._leaflet_map) {
       mapRef.current = containerRef.current._leaflet_map;
     } else {
-      const withCoords = (memories || []).filter((m) => typeof m.lat === 'number' && typeof m.lng === 'number');
+      const withCoords = [
+        ...(memories || []).filter((m) => typeof m.lat === 'number' && typeof m.lng === 'number'),
+        ...(pins || []).filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number'),
+      ];
       const center = withCoords.length ? [withCoords[0].lat, withCoords[0].lng] : [20, 0];
       const map = L.map(containerRef.current, {
-        center,
-        zoom: 2,
-        minZoom: 2,
-        maxZoom: 12,
-        scrollWheelZoom: false,
-        worldCopyJump: true,
-        zoomControl: true,
+        center, zoom: 2, minZoom: 2, maxZoom: 12,
+        scrollWheelZoom: false, worldCopyJump: true, zoomControl: true,
       });
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>',
@@ -88,12 +85,19 @@ export default function WorldMapInner({ memories }) {
 
       const markers = [];
       withCoords.forEach((m) => {
-        const marker = L.marker([m.lat, m.lng], { icon: bubbleIcon(m.photos?.[0], m.emoji) });
-        marker.on('click', () => setSelected(m));
+        const photo = m.photos?.[0] || m.photo;
+        const marker = L.marker([m.lat, m.lng], { icon: bubbleIcon(photo, m.emoji) });
+        marker.on('click', () => setSelected({
+          title: m.title || m.caption || 'A memory',
+          description: m.description || m.caption || '',
+          date: m.date || '',
+          location: m.location || '',
+          emoji: m.emoji || '💖',
+          photos: m.photos && m.photos.length ? m.photos : (photo ? [photo] : []),
+        }));
         marker.addTo(map);
         markers.push(marker);
       });
-      // Fit to bounds if multiple pins
       if (withCoords.length > 1) {
         const group = L.featureGroup(markers);
         try { map.fitBounds(group.getBounds().pad(0.35)); } catch (e) {}
@@ -101,14 +105,9 @@ export default function WorldMapInner({ memories }) {
       mapRef.current = map;
       containerRef.current._leaflet_map = map;
     }
-    // Give the map a small delay to recompute size (in case parent transitions)
     setTimeout(() => mapRef.current?.invalidateSize(), 300);
-
-    return () => {
-      // Do NOT destroy on unmount in dev (StrictMode double-mount would remove it before the second mount can re-use).
-      // But do destroy if the DOM node is going away for real (React actually removes the node).
-    };
-  }, [memories]);
+    return () => {};
+  }, [memories, pins]);
 
   return (
     <>

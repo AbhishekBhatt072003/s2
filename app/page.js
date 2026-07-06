@@ -17,6 +17,7 @@ import SecretMemory from '@/components/SecretMemory';
 import WorldMap from '@/components/WorldMap';
 import Scrapbook from '@/components/Scrapbook';
 import PhotoWall from '@/components/PhotoWall';
+import Constellations from '@/components/Constellations';
 import loveData from '@/lib/loveData';
 import { Heart, ChevronDown } from 'lucide-react';
 
@@ -68,7 +69,7 @@ function App() {
             </motion.div>
             <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2, delay: 0.4 }}
               className="font-script text-5xl sm:text-6xl md:text-8xl gradient-text px-2" style={{ lineHeight: 1.05 }}>
-              For you, my everything
+              For Sameer, my everything
             </motion.h1>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 1.1 }}
               className="mt-6 max-w-xl mx-auto text-lg sm:text-xl md:text-2xl font-serif-fancy italic text-rose-900/80">
@@ -83,8 +84,9 @@ function App() {
 
           <LoveStats stats={loveData.stats} />
           <MemoryTimeline memories={memories} />
-          <WorldMap memories={memories} />
-          <Scrapbook memories={memories} />
+          <WorldMap memories={memories} pins={config.scrapbook || []} />
+          <Constellations />
+          <Scrapbook items={config.scrapbook || []} memories={memories} />
           <PhotoWall photos={photoWallPhotos} username={config.photoWallUsername || 'abheer'} />
           <LoveLetter title={loveData.loveLetter.title} body={loveData.loveLetter.body} />
           <OpenWhen envelopes={loveData.openWhen} />

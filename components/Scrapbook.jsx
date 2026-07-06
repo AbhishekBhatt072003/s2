@@ -2,20 +2,13 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 
-// A handmade scrapbook: taped polaroids, sticky notes, tickets, doodles, coffee stains.
-// Uses items derived from memories + a few extras. Draggable-ish jitter for personality.
-
 function Tape({ className = '', color = 'rgba(255, 223, 100, 0.75)' }) {
   return (
-    <span
-      className={`absolute ${className}`}
-      style={{
-        width: 70, height: 18,
-        background: `repeating-linear-gradient(45deg, ${color} 0 6px, rgba(255,255,255,0.35) 6px 10px)`,
-        boxShadow: '0 4px 8px rgba(0,0,0,0.08)',
-        borderRadius: 2,
-      }}
-    />
+    <span className={`absolute ${className}`} style={{
+      width: 70, height: 18,
+      background: `repeating-linear-gradient(45deg, ${color} 0 6px, rgba(255,255,255,0.35) 6px 10px)`,
+      boxShadow: '0 4px 8px rgba(0,0,0,0.08)', borderRadius: 2,
+    }} />
   );
 }
 
@@ -37,7 +30,7 @@ function Doodle({ style, path, color = '#ff5f8f' }) {
   );
 }
 
-function Polaroid({ src, caption, rotate = -3, delay = 0 }) {
+function Polaroid({ src, caption, location, rotate = -3, delay = 0 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30, rotate: 0 }}
@@ -52,7 +45,10 @@ function Polaroid({ src, caption, rotate = -3, delay = 0 }) {
       <div className="w-full aspect-square overflow-hidden bg-neutral-100">
         <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
       </div>
-      <div className="absolute bottom-1 left-0 right-0 text-center font-script text-lg text-rose-950">{caption}</div>
+      <div className="absolute bottom-1 left-0 right-0 text-center">
+        <div className="font-script text-lg text-rose-950 leading-tight">{caption}</div>
+        {location && <div className="text-[10px] text-rose-800/70 tracking-wide">• {location}</div>}
+      </div>
     </motion.div>
   );
 }
@@ -100,13 +96,39 @@ function Ticket({ title, subtitle, delay = 0, rotate = 2 }) {
   );
 }
 
-export default function Scrapbook({ memories = [] }) {
-  // pick up to 6 photos across memories
-  const photos = useMemo(() => {
+const STICKY_NOTES = [
+  { text: 'my favorite thing today → you', color: '#ffe4a1', rotate: 4 },
+  { text: 'remember when we got lost — best turn ever', color: '#f9b8c8', rotate: -3 },
+  { text: 'if lost — return to me 💌', color: '#c8e0ff', rotate: 5 },
+  { text: 'you + me = my favorite equation', color: '#d9f5c0', rotate: -2 },
+];
+
+export default function Scrapbook({ items = [], memories = [] }) {
+  // Use admin-configured scrapbook items if any; otherwise derive from memories.
+  const cards = useMemo(() => {
+    if (items && items.length > 0) {
+      return items.map((it) => ({ src: it.photo, caption: it.caption || '', location: it.location || '' }));
+    }
     const flat = [];
-    (memories || []).forEach((m) => (m.photos || []).forEach((p) => flat.push({ src: p, caption: m.title })));
+    (memories || []).forEach((m) => (m.photos || []).forEach((p) => flat.push({ src: p, caption: m.title, location: m.location || '' })));
     return flat.slice(0, 6);
-  }, [memories]);
+  }, [items, memories]);
+
+  // interleave polaroids with sticky notes / ticket every ~3rd position
+  const layout = useMemo(() => {
+    const out = [];
+    let noteI = 0;
+    cards.forEach((c, i) => {
+      out.push({ kind: 'polaroid', ...c, rotate: [-4, 5, -2, 3, -3, 4][i % 6], delay: i * 0.05 });
+      if ((i + 1) % 3 === 0 && cards.length > i + 1) {
+        const n = STICKY_NOTES[noteI % STICKY_NOTES.length];
+        out.push({ kind: 'sticky', ...n, delay: i * 0.06 });
+        noteI++;
+      }
+    });
+    if (out.length > 3) out.splice(3, 0, { kind: 'ticket', title: 'Our first show, front row', subtitle: 'Row F · Seat 12 & 13', rotate: -3, delay: 0.15 });
+    return out;
+  }, [cards]);
 
   return (
     <section className="relative py-24 px-4 md:px-6 overflow-hidden">
@@ -126,22 +148,20 @@ export default function Scrapbook({ memories = [] }) {
       >
         <CoffeeStain style={{ top: 20, right: 40 }} />
         <CoffeeStain style={{ bottom: 60, left: 30, transform: 'scale(0.8)' }} />
-
         <Doodle path="M10,80 C 20,20 60,20 90,60 M75,50 L90,60 L80,70" style={{ top: 40, left: 50 }} />
         <Doodle path="M10,50 Q50,10 90,50 T170,50" style={{ bottom: 40, right: 60 }} color="#b46aff" />
 
         <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10 place-items-center">
-          {photos[0] && <Polaroid src={photos[0].src} caption={photos[0].caption} rotate={-4} delay={0} />}
-          <StickyNote text={"my favorite thing today → you"} rotate={4} delay={0.05} />
-          {photos[1] && <Polaroid src={photos[1].src} caption={photos[1].caption} rotate={5} delay={0.1} />}
-
-          <Ticket title="Our first show, front row" subtitle="Row F · Seat 12 & 13" rotate={-3} delay={0.15} />
-          {photos[2] && <Polaroid src={photos[2].src} caption={photos[2].caption} rotate={-2} delay={0.2} />}
-          <StickyNote text={"remember when we got lost — best turn ever"} color="#f9b8c8" rotate={-3} delay={0.25} />
-
-          {photos[3] && <Polaroid src={photos[3].src} caption={photos[3].caption} rotate={3} delay={0.3} />}
-          {photos[4] && <Polaroid src={photos[4].src} caption={photos[4].caption} rotate={-3} delay={0.35} />}
-          <StickyNote text={"if lost — return to me 💌"} color="#c8e0ff" rotate={5} delay={0.4} />
+          {layout.map((it, i) => {
+            if (it.kind === 'sticky') return <StickyNote key={i} text={it.text} color={it.color} rotate={it.rotate} delay={it.delay} />;
+            if (it.kind === 'ticket') return <Ticket key={i} title={it.title} subtitle={it.subtitle} rotate={it.rotate} delay={it.delay} />;
+            return <Polaroid key={i} src={it.src} caption={it.caption} location={it.location} rotate={it.rotate} delay={it.delay} />;
+          })}
+          {layout.length === 0 && (
+            <div className="col-span-full text-center text-rose-800/70 font-serif-fancy italic py-8">
+              Add scrapbook photos from the admin panel to fill this page.
+            </div>
+          )}
         </div>
       </div>
 

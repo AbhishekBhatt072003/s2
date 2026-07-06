@@ -11,7 +11,7 @@ const WorldMapInner = dynamic(() => import('./WorldMapInner'), {
   ),
 });
 
-export default function WorldMap({ memories }) {
+export default function WorldMap({ memories, pins = [] }) {
   return (
     <section className="relative py-24 px-4 md:px-6">
       <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -21,7 +21,7 @@ export default function WorldMap({ memories }) {
       <p className="text-center text-rose-900/70 font-serif-fancy italic mb-8">every pin is a place we made ours</p>
 
       <div className="max-w-5xl mx-auto glass rounded-3xl overflow-hidden shadow-2xl border border-white/70">
-        <WorldMapInner memories={memories} />
+        <WorldMapInner memories={memories} pins={pins} />
       </div>
     </section>
   );
