@@ -28,6 +28,8 @@ async function getConfig() {
       playlist: [],
       quiz: DEFAULT_QUIZ,
       scratchCards: DEFAULT_SCRATCH,
+      photoWall: [],
+      photoWallUsername: 'abheer',
       unlockMemoryId: 'secret1',
       secretMemory: {
         title: 'You unlocked a secret 💕',

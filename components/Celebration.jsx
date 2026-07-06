@@ -110,7 +110,7 @@ export default function Celebration({ message, onDone }) {
         <div className="text-7xl md:text-9xl mb-6 drop-shadow-lg">💖</div>
         <h1 className="font-script text-5xl md:text-7xl gradient-text mb-6">{message}</h1>
         <p className="font-serif-fancy italic text-xl md:text-2xl text-rose-900/80">
-          Now scroll down — there's more of us to remember.
+          Our next chapter is loading... stay close, my love.
         </p>
       </motion.div>
     </motion.div>

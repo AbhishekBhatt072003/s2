@@ -85,6 +85,8 @@ function MemoriesEditor({ cfg, setCfg }) {
               <input value={m.date} onChange={(e) => update(i, { date: e.target.value })} placeholder="Date (e.g. May 12, 2023)" className="px-3 py-2 rounded-lg bg-white border" />
               <input value={m.emoji} onChange={(e) => update(i, { emoji: e.target.value })} placeholder="Emoji" className="px-3 py-2 rounded-lg bg-white border" />
               <input value={m.location} onChange={(e) => update(i, { location: e.target.value })} placeholder="Location" className="px-3 py-2 rounded-lg bg-white border" />
+              <input type="number" step="any" value={m.lat ?? ''} onChange={(e) => update(i, { lat: e.target.value === '' ? undefined : parseFloat(e.target.value) })} placeholder="Latitude (e.g. 28.6139)" className="px-3 py-2 rounded-lg bg-white border" />
+              <input type="number" step="any" value={m.lng ?? ''} onChange={(e) => update(i, { lng: e.target.value === '' ? undefined : parseFloat(e.target.value) })} placeholder="Longitude (e.g. 77.209)" className="px-3 py-2 rounded-lg bg-white border" />
             </div>
             <textarea value={m.description} onChange={(e) => update(i, { description: e.target.value })} placeholder="Description" rows={3} className="mt-2 w-full px-3 py-2 rounded-lg bg-white border" />
             <div className="mt-3">
@@ -200,6 +202,30 @@ function ScratchEditor({ cfg, setCfg }) {
   );
 }
 
+function PhotoWallEditor({ cfg, setCfg }) {
+  const list = cfg.photoWall || [];
+  return (
+    <Section title="Photo Wall (Instagram-style)">
+      <p className="text-sm text-rose-800/70 mb-3">Upload as many photos as you want — they'll appear in a grid on your @{cfg.photoWallUsername || 'abheer'} profile.</p>
+      <div className="flex flex-wrap items-center gap-3 mb-3">
+        <label className="text-sm text-rose-800">Username:</label>
+        <input value={cfg.photoWallUsername || 'abheer'} onChange={(e) => setCfg({ ...cfg, photoWallUsername: e.target.value })} className="px-3 py-1 rounded-lg bg-white border text-sm" />
+        <UploadButton folder="photos" onUploaded={(url) => setCfg({ ...cfg, photoWall: [...list, url] })} label="Upload photo" />
+        <span className="text-xs text-rose-800/60">{list.length} photos</span>
+      </div>
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+        {list.map((p, i) => (
+          <div key={i} className="relative aspect-square rounded-lg overflow-hidden group">
+            <img src={p} alt="" className="w-full h-full object-cover" />
+            <button onClick={() => setCfg({ ...cfg, photoWall: list.filter((_, k) => k !== i) })}
+              className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100"><Trash2 className="w-3 h-3" /></button>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function SecretEditor({ cfg, setCfg }) {
   const s = cfg.secretMemory || { title: '', description: '', photo: '' };
   const upd = (patch) => setCfg({ ...cfg, secretMemory: { ...s, ...patch } });
@@ -264,6 +290,7 @@ function App() {
         <MusicEditor cfg={cfg} setCfg={setCfg} />
         <QuizEditor cfg={cfg} setCfg={setCfg} />
         <ScratchEditor cfg={cfg} setCfg={setCfg} />
+        <PhotoWallEditor cfg={cfg} setCfg={setCfg} />
         <SecretEditor cfg={cfg} setCfg={setCfg} />
 
         <div className="text-center py-6">
