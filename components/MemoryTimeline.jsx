@@ -3,6 +3,20 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, MapPin, Calendar, X, Maximize2 } from 'lucide-react';
 
+// Map "from-X to-Y" tags → actual CSS gradient (bypasses Tailwind JIT purge for dynamic values)
+const COLOR_GRADIENTS = {
+  'from-pink-300 to-rose-400':       'linear-gradient(90deg, #f9a8d4, #fb7185)',
+  'from-purple-300 to-fuchsia-400':  'linear-gradient(90deg, #d8b4fe, #e879f9)',
+  'from-rose-300 to-pink-400':       'linear-gradient(90deg, #fda4af, #f472b6)',
+  'from-indigo-300 to-purple-400':   'linear-gradient(90deg, #a5b4fc, #c084fc)',
+  'from-amber-300 to-rose-400':      'linear-gradient(90deg, #fcd34d, #fb7185)',
+  'from-pink-400 to-purple-400':     'linear-gradient(90deg, #f472b6, #c084fc)',
+  'from-fuchsia-400 to-purple-400':  'linear-gradient(90deg, #e879f9, #c084fc)',
+  'from-rose-400 to-pink-400':       'linear-gradient(90deg, #fb7185, #f472b6)',
+  'from-purple-400 to-pink-400':     'linear-gradient(90deg, #c084fc, #f472b6)',
+};
+const DEFAULT_GRADIENT = 'linear-gradient(90deg, #f472b6, #c084fc)';
+
 function Carousel({ photos }) {
   const [i, setI] = useState(0);
   const [full, setFull] = useState(false);
@@ -126,7 +140,8 @@ export default function MemoryTimeline({ memories }) {
 
               <div className="md:w-1/2 md:px-10 pl-12 md:pl-0">
                 <div className="glass rounded-3xl p-6 md:p-8">
-                  <div className={`inline-block px-3 py-1 rounded-full text-white text-xs bg-gradient-to-r ${m.color || 'from-pink-400 to-purple-400'}`}>
+                  <div className="inline-block px-3 py-1 rounded-full text-white text-xs"
+                    style={{ background: COLOR_GRADIENTS[m.color] || DEFAULT_GRADIENT }}>
                     <span className="mr-1">{m.emoji}</span>{m.title}
                   </div>
                   <div className="flex flex-wrap items-center gap-4 mt-3 text-rose-900/70 text-sm">
