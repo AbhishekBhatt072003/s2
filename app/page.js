@@ -85,17 +85,18 @@ function App() {
           <LoveStats stats={loveData.stats} />
           <MemoryTimeline memories={memories} />
 
-          {/* Space-band: smooth fade from pink → cosmic purple → pink, wrapping the Map + Constellations */}
+          {/* Map sits inside a soft pink→purple fade band; Constellations owns its own full-immersive background right after */}
           <div className="relative">
             <div className="absolute inset-0 pointer-events-none -z-0" aria-hidden style={{
               background:
-                'linear-gradient(180deg, rgba(20, 10, 45, 0) 0%, rgba(20, 10, 45, 0.55) 14%, rgba(15, 8, 40, 0.85) 40%, rgba(15, 8, 40, 0.85) 60%, rgba(20, 10, 45, 0.55) 86%, rgba(20, 10, 45, 0) 100%)',
+                'linear-gradient(180deg, rgba(20, 10, 45, 0) 0%, rgba(30, 15, 60, 0.35) 20%, rgba(30, 15, 60, 0.55) 55%, rgba(30, 15, 60, 0.35) 82%, rgba(20, 10, 45, 0) 100%)',
             }} />
             <div className="relative z-10">
               <WorldMap memories={memories} pins={config.scrapbook || []} />
-              <Constellations />
             </div>
           </div>
+
+          <Constellations />
 
           <Scrapbook items={config.scrapbook || []} memories={memories} />
           <PhotoWall photos={photoWallPhotos} username={config.photoWallUsername || 'abheer'} />
