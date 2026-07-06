@@ -84,8 +84,19 @@ function App() {
 
           <LoveStats stats={loveData.stats} />
           <MemoryTimeline memories={memories} />
-          <WorldMap memories={memories} pins={config.scrapbook || []} />
-          <Constellations />
+
+          {/* Space-band: smooth fade from pink → cosmic purple → pink, wrapping the Map + Constellations */}
+          <div className="relative">
+            <div className="absolute inset-0 pointer-events-none -z-0" aria-hidden style={{
+              background:
+                'linear-gradient(180deg, rgba(20, 10, 45, 0) 0%, rgba(20, 10, 45, 0.55) 14%, rgba(15, 8, 40, 0.85) 40%, rgba(15, 8, 40, 0.85) 60%, rgba(20, 10, 45, 0.55) 86%, rgba(20, 10, 45, 0) 100%)',
+            }} />
+            <div className="relative z-10">
+              <WorldMap memories={memories} pins={config.scrapbook || []} />
+              <Constellations />
+            </div>
+          </div>
+
           <Scrapbook items={config.scrapbook || []} memories={memories} />
           <PhotoWall photos={photoWallPhotos} username={config.photoWallUsername || 'abheer'} />
           <LoveLetter title={loveData.loveLetter.title} body={loveData.loveLetter.body} />
@@ -105,7 +116,7 @@ function App() {
           <footer className="relative py-16 text-center text-rose-900/70 font-serif-fancy italic px-4">
             <div className="text-4xl mb-2">❤️</div>
             <p>Made with every ounce of love in me.</p>
-            <p className="text-sm mt-1 opacity-60"><a href="/admin" className="underline">admin</a></p>
+            <p className="text-sm mt-1 opacity-60"><a href="/admin" className="underline">sonu</a></p>
           </footer>
 
           <SecretMemory open={secretOpen} memory={config.secretMemory} onClose={() => setSecretOpen(false)} />
