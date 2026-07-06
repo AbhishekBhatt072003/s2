@@ -83,7 +83,7 @@ function Ticket({ title, subtitle, delay = 0, rotate = 2 }) {
     >
       <div className="flex">
         <div className="px-4 py-3 text-white" style={{ background: 'linear-gradient(135deg, #ff5f8f, #b46aff)' }}>
-          <div className="font-mono text-xs">ADMIT ONE</div>
+          <div className="font-mono text-xs">Backrooms</div>
           <div className="font-serif-fancy text-lg">❤️</div>
         </div>
         <div className="flex-1 px-4 py-3">
@@ -98,7 +98,7 @@ function Ticket({ title, subtitle, delay = 0, rotate = 2 }) {
 
 const STICKY_NOTES = [
   { text: 'my favorite thing today → you', color: '#ffe4a1', rotate: 4 },
-  { text: 'remember when we got lost — best turn ever', color: '#f9b8c8', rotate: -3 },
+  { text: 'Don't ever leave me', color: '#f9b8c8', rotate: -3 },
   { text: 'if lost — return to me 💌', color: '#c8e0ff', rotate: 5 },
   { text: 'you + me = my favorite equation', color: '#d9f5c0', rotate: -2 },
 ];
