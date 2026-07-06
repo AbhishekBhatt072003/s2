@@ -77,7 +77,7 @@ export default function Constellations() {
         Written in the stars
       </motion.h2>
       <p className="text-center text-rose-900/70 font-serif-fancy italic mb-10 relative z-10">
-        my Taurus and your Sagittarius, quietly orbiting each other since forever
+        my Taurus and your Sagittarius, quietly orbiting each other since forever — <span className="whitespace-nowrap">Sonu ♡ Sameer</span>
       </p>
 
       <div className="relative max-w-5xl mx-auto rounded-3xl overflow-hidden shadow-2xl"
@@ -124,7 +124,7 @@ export default function Constellations() {
               <g transform="translate(-170, 0)">
                 {/* Counter-rotate so labels stay upright */}
                 <motion.g animate={{ rotate: -360 }} transition={{ duration: 90, ease: 'linear', repeat: Infinity }} style={{ transformOrigin: '0 0' }}>
-                  <Constellation data={TAURUS} color="#ffe4ec" glow="#ff8fb1" label="TAURUS" sub="Abheer" />
+                  <Constellation data={TAURUS} color="#ffe4ec" glow="#ff8fb1" label="TAURUS" sub="Sonu" />
                 </motion.g>
               </g>
             </motion.g>
