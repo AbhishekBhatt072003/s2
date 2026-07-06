@@ -159,7 +159,7 @@ export default function IntroSequence({ lines, onBegin }) {
               <span className="absolute inset-0 rounded-full ring-2 ring-white/40 animate-ping pointer-events-none" />
             </button>
 
-            <p className="text-white/40 text-xs italic">hint: it starts with &quot;my&quot; and ends with a beat</p>
+            <p className="text-white/40 text-xs italic">hint: you know it</p>
           </motion.form>
         )}
       </AnimatePresence>
