@@ -109,7 +109,7 @@ function App() {
           {!saidYes && (
             <section className="relative py-16">
               <Proposal question={loveData.proposal.question} yesButton={loveData.proposal.yesButton}
-                noTexts={loveData.proposal.noTexts} onYes={() => setSaidYes(true)} />
+                onYes={() => setSaidYes(true)} />
             </section>
           )}
           {saidYes && (<section id="celebration"><Celebration message={loveData.proposal.celebration} /></section>)}
